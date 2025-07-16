@@ -1,9 +1,9 @@
 import json
+import os
 from json.decoder import JSONDecodeError
 
 BACKEND_FILE_NAME = "backend_override.tf.json"
 VARIABLE_FILE_NAME = "variable_override.tf.json"
-PROVIDER_FILE_NAME = "provider_override.tf.json"
 MAX_SESSION_NAME_LENGTH = 64
 
 
@@ -14,7 +14,8 @@ def write_backend_override(workspace_dir, provisioned_product_descriptor, state_
                 "s3": {
                     "bucket": f"{state_bucket}",
                     "key": f"{provisioned_product_descriptor}",
-                    "region": f"{state_region}"
+                    "region": f"{state_region}",
+                    "profile": "default"
                 }
             }
         }
@@ -38,31 +39,32 @@ def write_variable_override(workspace_dir, variables):
         json.dump(variable_override, json_file)
 
 
-def write_provider_override(workspace_dir, provisioned_product_descriptor, launch_role_arn, region, tags):
-    provider_override = {
-        "provider": {
-            "aws": {
-                "region": f"{region}",
-                "assume_role": {
-                    "role_arn": f"{launch_role_arn}",
-                    "session_name": __format_session_name(provisioned_product_descriptor)
-                },
-                'default_tags': {
-                    'tags': {
-                    }
-                }
-            }
-        }
-    }
+def write_aws_config_file(directory: str, profile: str, region: str, role_arn: str, role_session_name: str) -> str:
+    config_template = """[default]
+region = {region}
+output = json
 
-    if tags != None:
-        for tag in tags:
-            key = tag['key']
-            provider_override['provider']['aws']['default_tags']['tags'][f'{key}'] = tag['value']
+[profile {profile}]
+role_arn = {role_arn}
+source_profile = default
+role_session_name = {role_session_name}
+region = {region}
+output = json
+"""
 
-    with open(f"{workspace_dir}/{PROVIDER_FILE_NAME}", "w") as json_file:
-        json.dump(provider_override, json_file)
+    config_content = config_template.format(
+        profile=profile,
+        region=region,
+        role_arn=role_arn,
+        role_session_name=__format_session_name(role_session_name)
+    )
 
+    config_path = os.path.join(directory, ".config")
+
+    with open(config_path, "w") as f:
+        f.write(config_content)
+
+    return config_path
 
 def __format_session_name(unformatted_session_name):
     return f"{unformatted_session_name[:MAX_SESSION_NAME_LENGTH]}".replace('/', '-')

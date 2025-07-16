@@ -1,3 +1,4 @@
+import os
 import subprocess
 
 from terraform_runner.CustomLogger import CustomLogger
@@ -16,7 +17,7 @@ class CommandManager:
         """
         self.__log = log
 
-    def run_command(self, command: list, log_stdout: bool = False):
+    def run_command(self, command: list, env: dict[str, str] = None, log_stdout: bool = False):
         """
         Parameters:
 
@@ -27,9 +28,13 @@ class CommandManager:
         """
         self.__log.info(f'Runnning command: {command}')
 
+        final_env = os.environ.copy()
+        if env:
+            final_env.update(env)
+
         result = None
         try:
-            result = subprocess.run(command, check=False, text=True, capture_output=True)
+            result = subprocess.run(command, check=False, text=True, capture_output=True, env=final_env)
         except Exception as e:
             raise RuntimeError(f'subprocess.run raise and exception while running command {command}: {e}')
 

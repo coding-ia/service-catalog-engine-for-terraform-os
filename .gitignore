@@ -249,3 +249,4 @@ lambda-functions/terraform_open_source_parameter_parser/go.sum
 
 #AWS
 .aws-sam
+/wrapper-scripts/.idea

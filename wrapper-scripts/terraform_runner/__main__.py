@@ -7,7 +7,7 @@ import traceback
 from terraform_runner.artifact_manager import download_artifact
 from terraform_runner.CommandManager import CommandManager
 from terraform_runner.CustomLogger import CustomLogger
-from terraform_runner.override_manager import write_backend_override, write_variable_override, write_provider_override
+from terraform_runner.override_manager import write_backend_override, write_variable_override, write_aws_config_file
 from terraform_runner.WorkspaceManager import WorkspaceManager
 
 
@@ -46,20 +46,37 @@ def __setup_workspace(workspace_manager):
 def __write_common_overrides(workspace_dir, args):
     write_backend_override(workspace_dir, args.provisioned_product_descriptor, 
         args.terraform_state_bucket, args.region)
-    write_provider_override(workspace_dir, args.provisioned_product_descriptor, args.launch_role,
-        args.region, args.tags)
 
 def __perform_apply(command_manager, workspace_dir, args):
     download_artifact(args.launch_role, args.artifact_path, workspace_dir)
     write_variable_override(workspace_dir, args.artifact_parameters)
-    command_manager.run_command(['terraform', 'init', '-no-color'])
-    command_manager.run_command(['terraform', 'validate', '-no-color'])
-    command_manager.run_command(['terraform', 'apply', '-auto-approve', '-input=false', '-compact-warnings', '-no-color'])
+    env_vars = __create_config(workspace_dir, args)
 
-def __perform_destroy(command_manager):
-    command_manager.run_command(['terraform', 'init', '-no-color'])
-    command_manager.run_command(['terraform', 'validate', '-no-color'])
-    command_manager.run_command(['terraform', 'destroy', '-auto-approve', '-no-color'])
+    if args.tags != None:
+        for tag in args.tags:
+            key = tag['key']
+            env_vars[f'TF_AWS_DEFAULT_TAGS_{key}'] = tag['value']
+
+    command_manager.run_command(['terraform', 'init', '-no-color'], env_vars)
+    command_manager.run_command(['terraform', 'validate', '-no-color'], env_vars)
+    command_manager.run_command(['terraform', 'apply', '-auto-approve', '-input=false', '-compact-warnings', '-no-color'], env_vars)
+
+def __perform_destroy(command_manager, workspace_dir, args):
+    env_vars = __create_config(workspace_dir, args)
+
+    command_manager.run_command(['terraform', 'init', '-no-color'], env_vars)
+    command_manager.run_command(['terraform', 'validate', '-no-color'], env_vars)
+    command_manager.run_command(['terraform', 'destroy', '-auto-approve', '-no-color'], env_vars)
+
+def __create_config(workspace_dir, args):
+    config_file = write_aws_config_file(workspace_dir, "terraform", args.region, args.launch_role, args.provisioned_product_descriptor)
+
+    env_vars = {
+        "AWS_PROFILE": "terraform",
+        "AWS_CONFIG_FILE": config_file,
+    }
+
+    return env_vars
 
 def main():
     args = __parse_arguments()
@@ -80,7 +97,7 @@ def main():
         if args.action == APPLY_ACTION:
             __perform_apply(command_manager, workspace_dir, args)
         elif args.action == DESTROY_ACTION:
-            __perform_destroy(command_manager)
+            __perform_destroy(command_manager, workspace_dir, args)
 
     except Exception as exception:
         message = str(exception)
