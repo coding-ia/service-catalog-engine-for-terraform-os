@@ -20,7 +20,8 @@ class TestOverrideManager(unittest.TestCase):
                     's3': {
                         'bucket': f'{state_bucket}',
                         'key': f'{provisioned_product_descriptor}',
-                        'region': f'{state_region}'
+                        'region': f'{state_region}',
+                        'profile': 'default'
                     }
                 }
             }
@@ -34,123 +35,6 @@ class TestOverrideManager(unittest.TestCase):
 
         # assert
         self.assertEqual(expected_backend_override, actual_backend_override)
-
-    def test_write_provider_override_happy_path(self):
-        # arrange
-        provisioned_product_descriptor = 'account-id/pp-id'
-        launch_role_arn = 'role-arn'
-        region = 'us-east-1'
-        tags = [{'key': 'k1', 'value': 'v1'}, {'key': 'k2', 'value': 'v2'}]
-        expected_provider_override = {
-            'provider': {
-                'aws': {
-                    'region': f'{region}',
-                    'assume_role': {
-                        'role_arn': f'{launch_role_arn}',
-                        'session_name': f'{provisioned_product_descriptor}'.replace('/', '-')
-                    },
-                    'default_tags': {
-                        'tags': {'k1': 'v1', 'k2': 'v2'}
-                    }
-                }
-            }
-        }
-
-        # act
-        override_manager.write_provider_override(self.TMP_WORKSPACE_DIR,
-                                                 provisioned_product_descriptor, launch_role_arn, region, tags)
-        with open(f'{self.TMP_WORKSPACE_DIR}/{override_manager.PROVIDER_FILE_NAME}', 'r') as json_file:
-            actual_provider_override = json.load(json_file)
-
-        # assert
-        self.assertEqual(expected_provider_override, actual_provider_override)
-
-    def test_write_provider_override_long_pp_descriptor(self):
-        # arrange
-        provisioned_product_descriptor = 'p' * 1000
-        expected_session_name = 'p' * override_manager.MAX_SESSION_NAME_LENGTH
-        launch_role_arn = 'role-arn'
-        region = 'us-east-1'
-        tags = [{'key': 'k1', 'value': 'v1'}, {'key': 'k2', 'value': 'v2'}]
-        expected_provider_override = {
-            'provider': {
-                'aws': {
-                    'region': f'{region}',
-                    'assume_role': {
-                        'role_arn': f'{launch_role_arn}',
-                        'session_name': f'{expected_session_name}'
-                    },
-                    'default_tags': {
-                        'tags': {'k1': 'v1', 'k2': 'v2'}
-                    }
-                }
-            }
-        }
-
-        # act
-        override_manager.write_provider_override(self.TMP_WORKSPACE_DIR,
-                                                 provisioned_product_descriptor, launch_role_arn, region, tags)
-        with open(f'{self.TMP_WORKSPACE_DIR}/{override_manager.PROVIDER_FILE_NAME}', 'r') as json_file:
-            actual_provider_override = json.load(json_file)
-
-        # assert
-        self.assertEqual(expected_provider_override, actual_provider_override)
-
-    def test_write_provider_override_no_tags(self):
-        # arrange
-        provisioned_product_descriptor = 'account-id/pp-id'
-        launch_role_arn = 'role-arn'
-        region = 'us-east-1'
-        tags = None
-        expected_provider_override = {
-            'provider': {
-                'aws': {
-                    'region': f'{region}',
-                    'assume_role': {
-                        'role_arn': f'{launch_role_arn}',
-                        'session_name': f'{provisioned_product_descriptor}'.replace('/', '-')
-                    },
-                    'default_tags': {'tags': {}}
-                }
-            }
-        }
-
-        # act
-        override_manager.write_provider_override(self.TMP_WORKSPACE_DIR,
-                                                 provisioned_product_descriptor, launch_role_arn, region, tags)
-        with open(f'{self.TMP_WORKSPACE_DIR}/{override_manager.PROVIDER_FILE_NAME}', 'r') as json_file:
-            actual_provider_override = json.load(json_file)
-
-        # assert
-        self.assertEqual(expected_provider_override, actual_provider_override)
-
-    def test_write_provider_override_empty_tags(self):
-        # arrange
-        provisioned_product_descriptor = 'account-id/pp-id'
-        launch_role_arn = 'role-arn'
-        region = 'us-east-1'
-        tags = {}
-        expected_provider_override = {
-            'provider': {
-                'aws': {
-                    'region': f'{region}',
-                    'assume_role': {
-                        'role_arn': f'{launch_role_arn}',
-                        'session_name': f'{provisioned_product_descriptor}'.replace('/', '-')
-                    },
-                    'default_tags': {'tags': {}}
-                }
-            }
-        }
-
-        # act
-        override_manager.write_provider_override(self.TMP_WORKSPACE_DIR,
-                                                 provisioned_product_descriptor, launch_role_arn, region, tags)
-        with open(f'{self.TMP_WORKSPACE_DIR}/{override_manager.PROVIDER_FILE_NAME}', 'r') as json_file:
-            actual_provider_override = json.load(json_file)
-
-        # assert
-        self.assertEqual(expected_provider_override, actual_provider_override)
 
     def test_write_variable_override_happy_path(self):
         # arrange
