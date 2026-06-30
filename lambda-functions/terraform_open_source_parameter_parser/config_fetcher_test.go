@@ -1,14 +1,14 @@
 package main
 
 import (
+	"context"
 	"errors"
-	"io"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	tm "github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 	"os"
 	"reflect"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -23,14 +23,17 @@ type MockS3Downloader struct {
 	mock.Mock
 }
 
-func (m *MockS3Downloader) Download(w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error) {
+func (m *MockS3Downloader) DownloadObject(ctx context.Context, input *tm.DownloadObjectInput, opts ...func(*tm.Options)) (*tm.DownloadObjectOutput, error) {
 	if *input.Bucket != "terraform-configurations-cross-account-demo" || *input.Key != "product_with_override_var.tar.gz" {
-		return 0, errors.New(S3ClientErrorMessage)
+		return nil, errors.New(S3ClientErrorMessage)
 	}
 
 	b, _ := os.ReadFile(TestS3BucketArtifactPath)
-	numBytes, _ := w.WriteAt(b, 0)
-	return int64(numBytes), nil
+	numBytes, _ := input.WriterAt.WriteAt(b, 0)
+
+	return &tm.DownloadObjectOutput{
+		ContentLength: aws.Int64(int64(numBytes)),
+	}, nil
 }
 
 func TestConfigFetcherFetchHappy(t *testing.T) {
@@ -51,7 +54,7 @@ func TestConfigFetcherFetchHappy(t *testing.T) {
 	}
 
 	// act
-	fileMap, err := configFetcher.fetch(input)
+	fileMap, err := configFetcher.fetch(t.Context(), input)
 
 	// assert
 	if err != nil {
@@ -86,7 +89,7 @@ func TestConfigFetcherFetchWithEmptyLaunchRoleHappy(t *testing.T) {
 	}
 
 	// act
-	fileMap, err := configFetcher.fetch(input)
+	fileMap, err := configFetcher.fetch(t.Context(), input)
 
 	// assert
 	if err != nil {

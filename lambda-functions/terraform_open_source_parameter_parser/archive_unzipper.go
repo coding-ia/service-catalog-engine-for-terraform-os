@@ -57,7 +57,7 @@ func getFileMapFromGzip(gzipReader io.Reader) (map[string]string, error) {
 		// File extension names within the zipped file will have to end with .tf
 		// Hence header name will need to be at least 4 chars
 		if len(hdr.Name) < 4 {
-			log.Printf("Skipping non tf file %s",  hdr.Name)
+			log.Printf("Skipping non tf file %s", hdr.Name)
 			continue
 		}
 

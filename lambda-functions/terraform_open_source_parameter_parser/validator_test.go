@@ -47,7 +47,7 @@ func TestValidateInputWithEmptyLaunchRoleHappy(t *testing.T) {
 func TestValidateInputWithEmptyArtifactThrowsParserInvalidParameterException(t *testing.T) {
 	// setup
 	input := TerraformOpenSourceParameterParserInput{
-		Artifact: Artifact{},
+		Artifact:      Artifact{},
 		LaunchRoleArn: TestLaunchRoleArn,
 	}
 	expectedErrorMessage := fmt.Sprintf(RequiredKeyMissingOrEmptyErrorMessage, ArtifactKey)

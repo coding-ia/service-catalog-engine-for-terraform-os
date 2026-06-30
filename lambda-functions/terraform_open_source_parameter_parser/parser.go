@@ -94,11 +94,11 @@ func parseParameterMapFromFileMap(fileMap map[string]string, moduleName string) 
 		}
 
 		parameterMap[variable.Name] = &Parameter{
-			Key: variable.Name,
+			Key:          variable.Name,
 			DefaultValue: defaultValue,
-			Type: variable.Type,
-			Description: variable.Description,
-			IsNoEcho: variable.Sensitive,
+			Type:         variable.Type,
+			Description:  variable.Description,
+			IsNoEcho:     variable.Sensitive,
 		}
 	}
 	return parameterMap

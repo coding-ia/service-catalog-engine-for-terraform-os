@@ -2,10 +2,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"net/url"
 	"reflect"
-
-	"github.com/aws/aws-sdk-go/aws/arn"
 )
 
 const ArtifactKey = "Artifact"

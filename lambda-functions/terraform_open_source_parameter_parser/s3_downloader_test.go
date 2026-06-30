@@ -1,13 +1,13 @@
 package main
 
 import (
+	"context"
 	"errors"
-	"io"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	tm "github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 	"reflect"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -21,14 +21,16 @@ type MockDownloader struct {
 	mock.Mock
 }
 
-func (m *MockDownloader) Download(w io.WriterAt, input *s3.GetObjectInput, options ...func(*s3manager.Downloader)) (n int64, err error) {
-	num, _ := w.WriteAt([]byte(TestString), 0)
+func (m *MockDownloader) DownloadObject(ctx context.Context, input *tm.DownloadObjectInput, opts ...func(*tm.Options)) (*tm.DownloadObjectOutput, error) {
+	num, _ := input.WriterAt.WriteAt([]byte(TestString), 0)
 
 	if *input.Bucket == TestBucketError {
-		return 0, errors.New(S3ClientErrorMessage)
+		return nil, errors.New(S3ClientErrorMessage)
 	}
 
-	return int64(num), nil
+	return &tm.DownloadObjectOutput{
+		ContentLength: aws.Int64(int64(num)),
+	}, nil
 }
 
 func TestS3DownloaderDownloadHappy(t *testing.T) {
@@ -40,7 +42,7 @@ func TestS3DownloaderDownloadHappy(t *testing.T) {
 	expectedResult := []byte(TestString)
 
 	// act
-	actualResult, err := s3Downloader.download(TestBucketHappy, TestObjectPath)
+	actualResult, err := s3Downloader.download(t.Context(), TestBucketHappy, TestObjectPath)
 
 	// assert
 	if err != nil {
@@ -60,7 +62,7 @@ func TestS3DownloaderDownloadClientError(t *testing.T) {
 	}
 
 	// act
-	_, err := s3Downloader.download(TestBucketError, TestObjectPath)
+	_, err := s3Downloader.download(t.Context(), TestBucketError, TestObjectPath)
 
 	// assert
 	if err.Error() != S3ClientErrorMessage {
